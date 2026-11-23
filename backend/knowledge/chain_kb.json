@@ -1,0 +1,67 @@
+{
+  "_readme": "产业链知识库。stocks 按6位代码存个股专属穿透结论；industries 按行业关键字存通用图谱。每条 node/link 的 source 字段标注来源可信度：REAL=公开披露事实，AI_INFERRED=公开资料整理的推断(需核实)，INDUSTRY_KB=行业通用图谱。research_date 为研究日期。可手工扩充或通过 AI 研究补充。",
+  "stocks": {
+    "688825": {
+      "name": "长鑫科技",
+      "research_date": "2026-11-18",
+      "position": "国产 DRAM 龙头（IDM 全产业链），中国第一/全球第四，全球仅四家具备 DRAM 全链条能力",
+      "nodes": [
+        {"id":"self","name":"长鑫科技 688825","stage":"中游","role":"当前标的 · DRAM晶圆制造(IDM)","source":"REAL","detail":"合肥/北京3座12英寸厂，2026年底月产能约30万片(全球约15%)，2026Q2全球DRAM份额约10%"},
+        {"id":"u1","name":"北方华创 002371","stage":"上游","role":"设备-刻蚀/薄膜/热处理/清洗","source":"AI_INFERRED","detail":"第一大国产设备商，占长鑫设备采购约30%-45%，DRAM刻蚀国产份额超50%"},
+        {"id":"u2","name":"中微公司 688012","stage":"上游","role":"设备-等离子刻蚀/薄膜沉积","source":"AI_INFERRED","detail":"17nm DRAM、HBM深孔TSV刻蚀核心供应商"},
+        {"id":"u3","name":"拓荆科技 688072","stage":"上游","role":"设备-PECVD/ALD","source":"AI_INFERRED","detail":"包揽长鑫国产PECVD主要标段，份额超65%，存储业务占营收八成以上"},
+        {"id":"u4","name":"华海清科 688120","stage":"上游","role":"设备-CMP抛光","source":"AI_INFERRED","detail":"长鑫国产CMP设备份额超60%，HBM减薄抛光一体机独家"},
+        {"id":"u5","name":"雅克科技 002409","stage":"上游","role":"材料-前驱体(壁垒最高)","source":"AI_INFERRED","detail":"长鑫前驱体第一大供应商，份额超60%，17nm High-k独家，协议锁至2028年"},
+        {"id":"u6","name":"沪硅产业 688126","stage":"上游","role":"材料-12英寸硅片","source":"AI_INFERRED","detail":"长鑫最大国产硅片供应商，2025年采购近10亿元；西安奕材为硅片一供"},
+        {"id":"u7","name":"安集科技 688019","stage":"上游","role":"材料-CMP抛光液","source":"AI_INFERRED","detail":"17nm国产独家，供货占比超60%，长鑫为其第二大客户"},
+        {"id":"u8","name":"鼎龙股份 300054","stage":"上游","role":"材料-CMP抛光垫","source":"AI_INFERRED","detail":"国产份额70%+，通过长鑫全制程认证，2026长协续签"},
+        {"id":"u9","name":"广钢气体 688548","stage":"上游","role":"材料-电子特气(大宗气)","source":"AI_INFERRED","detail":"15年长约管道直供，覆盖长鑫气体采购40%-45%"},
+        {"id":"u10","name":"江丰电子 300666","stage":"上游","role":"材料-溅射靶材","source":"AI_INFERRED","detail":"长鑫第一大靶材供应商，铝铜靶采购份额超80%"},
+        {"id":"u11","name":"彤程新材 603650","stage":"上游","role":"材料-KrF光刻胶","source":"AI_INFERRED","detail":"28/19nm DRAM稳定批量供货；高端ArF仍依赖进口、EUV国内为零(薄弱环节)"},
+        {"id":"m1","name":"深科技 000021","stage":"中游","role":"封测-最大委外封测商","source":"AI_INFERRED","detail":"子公司沛顿科技承接长鑫60%-70%封测，合肥厂区紧邻长鑫基地"},
+        {"id":"m2","name":"通富微电 002156","stage":"中游","role":"封测-HBM 3D堆叠","source":"AI_INFERRED","detail":"高端堆叠独家战略伙伴，份额25%-30%"},
+        {"id":"m3","name":"澜起科技 688008","stage":"中游","role":"配套芯片-DDR5内存接口","source":"AI_INFERRED","detail":"长鑫DDR5模组唯一指定配套芯片厂商，订单覆盖至2027Q1"},
+        {"id":"d1","name":"兆易创新 603986","stage":"下游","role":"分销-DRAM独家代理","source":"AI_INFERRED","detail":"持股1.88%，DRAM独家代理至2030年，同一董事长，2026关联交易预计57亿元"},
+        {"id":"d2","name":"江波龙 301308","stage":"下游","role":"模组-合资DDR5模组厂","source":"AI_INFERRED","detail":"与长鑫合资DDR5内存模组工厂"},
+        {"id":"d3","name":"阿里云/腾讯/字节/美团","stage":"下游","role":"终端-服务器/云计算","source":"AI_INFERRED","detail":"数据中心内存战略合作；占营收10%以上客户合计贡献53.32%(2026H1)"},
+        {"id":"d4","name":"小米/荣耀/OPPO/vivo/传音","stage":"下游","role":"终端-手机消费电子","source":"AI_INFERRED","detail":"传音全系列LPDDR4X/5X供货；与小米联合研发"},
+        {"id":"d5","name":"蔚来/奇瑞/联想/中兴","stage":"下游","role":"终端-汽车/PC/通信","source":"AI_INFERRED","detail":"车规存储、服务器与通信设备"}
+      ],
+      "links": [
+        {"from":"u1","to":"self","relation":"供应刻蚀/薄膜设备","strength":"强","source":"AI_INFERRED"},
+        {"from":"u2","to":"self","relation":"供应刻蚀设备(17nm/HBM)","strength":"强","source":"AI_INFERRED"},
+        {"from":"u3","to":"self","relation":"供应PECVD薄膜设备","strength":"强","source":"AI_INFERRED"},
+        {"from":"u4","to":"self","relation":"供应CMP抛光设备","strength":"中","source":"AI_INFERRED"},
+        {"from":"u5","to":"self","relation":"供应前驱体材料(份额60%+)","strength":"强","source":"AI_INFERRED"},
+        {"from":"u6","to":"self","relation":"供应12英寸硅片","strength":"强","source":"AI_INFERRED"},
+        {"from":"u7","to":"self","relation":"供应CMP抛光液","strength":"强","source":"AI_INFERRED"},
+        {"from":"u8","to":"self","relation":"供应CMP抛光垫","strength":"中","source":"AI_INFERRED"},
+        {"from":"u9","to":"self","relation":"供应电子特气(15年长约)","strength":"强","source":"AI_INFERRED"},
+        {"from":"u10","to":"self","relation":"供应溅射靶材","strength":"中","source":"AI_INFERRED"},
+        {"from":"u11","to":"self","relation":"供应KrF光刻胶","strength":"中","source":"AI_INFERRED"},
+        {"from":"self","to":"m1","relation":"委外封测(60%-70%)","strength":"强","source":"AI_INFERRED"},
+        {"from":"self","to":"m2","relation":"委外HBM堆叠封装","strength":"中","source":"AI_INFERRED"},
+        {"from":"m3","to":"self","relation":"配套DDR5内存接口芯片","strength":"强","source":"AI_INFERRED"},
+        {"from":"self","to":"d1","relation":"DRAM独家代理至2030","strength":"强","source":"AI_INFERRED"},
+        {"from":"self","to":"d2","relation":"合资DDR5模组","strength":"中","source":"AI_INFERRED"},
+        {"from":"self","to":"d3","relation":"供应服务器/云内存","strength":"强","source":"AI_INFERRED"},
+        {"from":"self","to":"d4","relation":"供应LPDDR手机存储","strength":"强","source":"AI_INFERRED"},
+        {"from":"self","to":"d5","relation":"车规/PC/通信存储","strength":"中","source":"AI_INFERRED"}
+      ],
+      "notes": [
+        "产业链上游为设备与材料（国产替代最活跃、受益确定性最高），中游为封测/配套芯片，下游为模组/终端客户。",
+        "受益节奏：长协锁定的材料(雅克/广钢/安集/鼎龙) > 高份额设备(北方华创/拓荆/华海清科) > 封测(深科技/通富微电) > 模组分销(江波龙/兆易创新)。",
+        "薄弱环节：硅片国产化率仅约15%，高端ArF光刻胶依赖进口，EUV光刻胶国内为零，先进掩模版由美Photronics/日Toppan/DNP供应——这是扩产最实质约束。",
+        "资本纽带：IPO战略配售30家机构中，产业链公司(西安奕材/澜起/拓荆/安集/通富微电/中微等)与下游(小米/美团/阿里/腾讯/传音/蔚来等)各获配约1.58亿元、锁定18个月，形成'股权+业务'双向绑定。",
+        "所有供货份额数据来自券商调研与媒体测算，不同来源口径差异较大，确切比例应以公司公告和招股书为准。"
+      ],
+      "sources": [
+        {"label":"长鑫科技招股书/战略配售公告(2026)","type":"一手","url":""},
+        {"label":"长鑫科技2026三季报/业绩说明会(2026-11-17)","type":"一手","url":""},
+        {"label":"券商研报(国金/华鑫电子)&公开供应链报道","type":"非一手·需核实","url":""},
+        {"label":"研究整理日期 2026-11-18","type":"meta","url":""}
+      ]
+    }
+  },
+  "industries": {}
+}

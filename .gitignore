@@ -1,0 +1,37 @@
+# ===== 运行时敏感数据：持仓密文、密钥、决策历史（绝不提交） =====
+data/secure/*.enc
+data/secure/*.bak
+data/secure/*.key
+*.enc
+*.enc.bak
+*.key
+secret.key
+
+# ===== 运行时缓存与状态（不提交） =====
+data/*_cache/
+data/decision_history/
+data/decision_autorun_status.json
+data/decision_watchlist.json
+data/picks_history.json
+data/*.log
+data/last_signal_job.txt
+
+# ===== 虚拟环境与 Python 编译产物 =====
+venv/
+env/
+.venv/
+__pycache__/
+*.py[cod]
+*.so
+
+# ===== 测试与临时文件 =====
+*.tmp
+.tmp/
+temp/
+
+# ===== 操作系统与 IDE =====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

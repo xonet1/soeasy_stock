@@ -1,0 +1,17 @@
+# Windows 批处理脚本必须使用 CRLF 换行
+*.bat text eol=crlf
+
+# 源码与文档统一 LF（检出时按平台 core.autocrlf 处理）
+*.py text eol=lf
+*.js text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.gitignore text eol=lf
+
+# 二进制文件不换行转换
+*.png binary
+*.jpg binary
+*.zip binary
