@@ -34,6 +34,8 @@ from flask import Flask, jsonify, request, send_from_directory, Response
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tdx_reader import TdxData
+from market_router import MarketRouter
+from us_reader import is_us_code, norm_code
 from indicators import enrich, latest_indicators
 from signals import scan_market, SIGNAL_LABELS, FILTER_LABELS
 import news_reader
@@ -71,9 +73,29 @@ except Exception:
 reader = None
 init_error = None
 try:
-    reader = TdxData()
+    # 统一路由：6 位数字走 A 股本地通达信，字母 ticker 走美股免费源。
+    # 即使本机没有通达信客户端，美股数据仍可用（A 股部分降级为空）。
+    reader = MarketRouter()
 except Exception as e:
     init_error = str(e)
+
+
+def norm_any_code(code):
+    """统一规范化股票代码：美股 ticker 大写原样（brk-b→BRK.B），A 股补足 6 位。"""
+    s = str(code or "").strip()
+    return norm_code(s) if is_us_code(s) else s.zfill(6)
+
+
+class USCodeUnsupported(Exception):
+    """标记某接口收到美股代码但该模块仅支持 A 股。"""
+
+
+def a_share_code(code):
+    """仅支持 A 股的模块入口用：遇到美股代码抛出明确错误。"""
+    s = str(code or "").strip()
+    if is_us_code(s):
+        raise USCodeUnsupported(s)
+    return s.zfill(6)
 
 # 后台扫描任务状态
 JOBS = {}
@@ -308,6 +330,12 @@ def err(msg, code=400):
     return jsonify({"ok": False, "error": str(msg)}), code
 
 
+@app.errorhandler(USCodeUnsupported)
+def _on_us_unsupported(e):
+    """A 股专属模块收到美股代码时返回清晰提示，而不是莫名的数据缺失。"""
+    return err(f"{e} 为美股代码，该模块暂仅支持 A 股", 400)
+
+
 def _to_int(v, default):
     """安全 int 转换；非法返回 None（调用方决定 400 或默认值）。"""
     try:
@@ -385,6 +413,14 @@ def search():
             res.append({"code": code, "name": name, "has_data": code in codes})
             if len(res) >= 30:
                 break
+    # 美股：字母 ticker 或中文名命中（如 AAPL / 苹果 / 特斯拉）
+    try:
+        for it in reader.search_us(q):
+            res.append(it)
+            if len(res) >= 40:
+                break
+    except Exception:
+        pass
     return ok(res)
 
 
@@ -517,8 +553,11 @@ def stock(code):
             "bias6", "bias12", "bias24", "wr14", "roc12", "obv"]
     from signals import detect_signals
     from volume_analysis import volume_records, daily_verdicts
+    # 美股 ticker 保持原样；A 股补零到 6 位，避免 AAPL 被误转为 00AAPL
+    out_code = norm_code(code) if is_us_code(code) else str(code).zfill(6)
     return ok({
-        "code": str(code).zfill(6),
+        "code": out_code,
+        "market": "US" if is_us_code(code) else "A",
         "name": reader.name_of(code),
         "bars": df_to_records(bars_df, cols),
         "indicators": latest_indicators(d),
@@ -643,7 +682,7 @@ def chain_api(code):
     """个股上下游产业链穿透：真实数据（公司资料/主营构成）+ AI 推断图层，逐条标注来源。"""
     if not reader:
         return err(init_error or "数据未初始化", 500)
-    code = str(code).strip().zfill(6)
+    code = a_share_code(code)
     if not code.isdigit():
         return err("请提供有效的股票代码", 400)
     refresh = request.args.get("refresh", "").lower() in ("1", "true", "yes")
@@ -661,7 +700,7 @@ def finreport_api(code):
     """近 8 年年报分析：营收/净利/ROE/负债率/分红逐年 + CAGR/现金流含金量 + 长期健康分。"""
     try:
         data = fin_report.fetch_fin8(
-            str(code).zfill(6),
+            a_share_code(code),
             refresh=str(request.args.get("refresh", "")).lower() in ("1", "true", "yes"),
         )
         if data.get("ok") and not data.get("name"):
@@ -679,7 +718,7 @@ def finreport_api(code):
 def predict_api(code):
     """下一交易日买卖概率评级：历史相似条件统计(kNN) + 六维研判评分 Logistic 融合。"""
     try:
-        return ok(predict_reader.predict_next_day(str(code).zfill(6)))
+        return ok(predict_reader.predict_next_day(a_share_code(code)))
     except Exception as e:
         traceback.print_exc()
         return err(f"概率评级计算失败：{e}", 500)
@@ -693,7 +732,8 @@ def decision_api(code):
         return err(init_error or "数据未初始化", 500)
     try:
         force = request.args.get("refresh") in ("1", "true", "True")
-        dec, created = decision_history.ensure_snapshot(reader, str(code).zfill(6), force=force)
+        norm = norm_any_code(code)
+        dec, created = decision_history.ensure_snapshot(reader, norm, force=force)
         return ok(dec)
     except Exception as e:
         traceback.print_exc()
@@ -780,7 +820,7 @@ def decision_watchlist_api():
 def decision_history_api(code):
     """每日快照账本：列出所有历史快照，供回看与对比。"""
     try:
-        return ok(decision_history.list_snapshots(str(code).zfill(6)))
+        return ok(decision_history.list_snapshots(norm_any_code(code)))
     except Exception as e:
         traceback.print_exc()
         return err(f"快照账本读取失败：{e}", 500)
@@ -793,10 +833,11 @@ def decision_accuracy_api(code):
         return err(init_error or "数据未初始化", 500)
     try:
         force = request.args.get("force") in ("1", "true", "True")
-        data = decision_history.verify_snapshots(reader, str(code).zfill(6))
-        bt = decision_history.backtest_signal(reader, str(code).zfill(6), force=force)
+        norm = norm_any_code(code)
+        data = decision_history.verify_snapshots(reader, norm)
+        bt = decision_history.backtest_signal(reader, norm, force=force)
         return ok({
-            "code": str(code).zfill(6),
+            "code": norm,
             "snapshot_stats": data[1],
             "snapshots": data[0][:60],
             "backtest": {"stats": bt.get("stats"), "records": (bt.get("records") or [])[-80:],
@@ -872,7 +913,7 @@ def models_api(code):
     """多模型购买参考：F-Score/Z风险/格雷厄姆/PEG/质量五维 + 海龟/格兰维尔/动量/波动，综合评分。"""
     refresh = request.args.get("refresh", "").lower() in ("1", "true", "yes")
     try:
-        data = models_reader.analyze(str(code).zfill(6), refresh=refresh)
+        data = models_reader.analyze(a_share_code(code), refresh=refresh)
         if data.get("ok") and data.get("name") is None:
             try:
                 data["name"] = reader.name_of(str(code).zfill(6))
@@ -1080,7 +1121,7 @@ def controllers_export_api():
 @app.route("/api/controllers/company/<code>")
 def controllers_company_api(code):
     """单只股票的实控人与控制链。"""
-    code = str(code).strip().zfill(6)
+    code = a_share_code(code)
     if not code.isdigit():
         return err("无效股票代码", 400)
     rec = controller_reader.fetch_one(code)
@@ -1102,7 +1143,7 @@ def cninfo_status_api():
 @app.route("/api/cninfo/<code>")
 def cninfo_one_api(code):
     """单只股票的巨潮公告证据：年报链接、实控人原文、前十大股东、权益变动。"""
-    code = str(code).strip().zfill(6)
+    code = a_share_code(code)
     if not code.isdigit():
         return err("无效股票代码", 400)
     refresh = request.args.get("refresh", "").lower() in ("1", "true", "yes")
@@ -1134,7 +1175,7 @@ def cninfo_scan_api():
 @app.route("/api/holder/lookthrough")
 def holder_lookthrough_api():
     """股东穿透：主体/控制链 → 主体经营结构 → 标的吸引力 → 公开证据 → 动机结论。"""
-    code = str(request.args.get("code", "")).strip().zfill(6)
+    code = a_share_code(request.args.get("code", ""))
     holder = str(request.args.get("holder", "")).strip()
     if not code.isdigit() or not holder:
         return err("需要有效的 code 与 holder 参数", 400)
@@ -1169,7 +1210,7 @@ def holders_api(code):
     """个股前十大股东：十大股东/十大流通股东 + 集中度/增减持汇总。"""
     if not reader:
         return err(init_error or "数据未初始化", 500)
-    code = str(code).strip().zfill(6)
+    code = a_share_code(code)
     if not code.isdigit():
         return err("请提供有效的股票代码", 400)
     if code not in reader.build_index():
@@ -1209,7 +1250,7 @@ def holders_deep_api():
 @app.route("/api/holders/status/<code>")
 def holders_status_api(code):
     """股东采集合规状态（缓存时点、限速参数、审计日志）。"""
-    code = str(code).strip().zfill(6)
+    code = a_share_code(code)
     if not code.isdigit():
         return err("请提供有效的股票代码", 400)
     return ok(holder_reader.fetch_status(code))
@@ -1220,7 +1261,7 @@ def relation_api(code):
     """个股关联分析：本地行情相关性 + 相对沪深300强弱。"""
     if not reader:
         return err(init_error or "数据未初始化", 500)
-    code = str(code).strip().zfill(6)
+    code = a_share_code(code)
     if not code.isdigit():
         return err("请提供有效的股票代码", 400)
     refresh = request.args.get("refresh", "").lower() in ("1", "true", "yes")
@@ -1239,7 +1280,7 @@ def policy_api(code):
     """个股政策分析：政策快讯规则映射到行业/个股，情绪打分。"""
     if not reader:
         return err(init_error or "数据未初始化", 500)
-    code = str(code).strip().zfill(6)
+    code = a_share_code(code)
     if not code.isdigit():
         return err("请提供有效的股票代码", 400)
     refresh = request.args.get("refresh", "").lower() in ("1", "true", "yes")

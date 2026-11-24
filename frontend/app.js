@@ -87,6 +87,8 @@ function fmtPrice(n, code){ if(n==null) return '—'; return Number(n).toFixed(i
 function pctCls(n){ return n>0?'up':(n<0?'down':''); }
 function pct(n){ return n==null?'—':(n>0?'+':'')+Number(n).toFixed(2)+'%'; }
 function esc(s){ return s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// 代码规范化：纯数字补足 6 位（600519→000...600519），美股 ticker 原样（AAPL/BRK.B）
+function padCode(c){ const s=String(c==null?'':c).trim(); return /^\d{1,6}$/.test(s)?s.padStart(6,'0'):s; }
 // 页面内浮层提示：取代浏览器原生 alert（原生弹窗位置由浏览器决定，常出现在窗口最上方）
 let _toastTimer=null;
 function toast(msg,kind){
@@ -167,7 +169,7 @@ function bindSearch(inputId, resultId, onSelect){
         if(!list.length){ box.innerHTML='<div style="color:#9aa3ad">无结果</div>'; }
         list.forEach(it=>{
           const d=document.createElement('div');
-          d.textContent=`${it.code}  ${it.name}`+(it.has_data?'':'（无数据）');
+          d.textContent=`${it.code}  ${it.name}`+(it.market==='US'?'（美股·约15分钟延迟）':'')+(it.has_data?'':'（无数据）');
           d.addEventListener('click',()=>{ input.value=it.code; box.classList.remove('show'); onSelect(it); });
           box.appendChild(d);
         });
@@ -1176,7 +1178,7 @@ function renderPortfolio(d){
     '</tbody></table>';
   holdings.forEach((h,i)=>{
     const cell=document.getElementById('hw'+i);
-    if(cell){ const row=(d.details||[]).find(x=>x.code===String(h.code).padStart(6,'0')&&x.account===acctOf(h)); cell.textContent=row&&row.weight_pct!=null?fmt(row.weight_pct,2)+'%':'—'; }
+    if(cell){ const row=(d.details||[]).find(x=>x.code===padCode(h.code)&&x.account===acctOf(h)); cell.textContent=row&&row.weight_pct!=null?fmt(row.weight_pct,2)+'%':'—'; }
   });
 
   if(!equityChart) equityChart=echarts.init(document.getElementById('equityChart'));
@@ -2258,7 +2260,7 @@ async function renderHoldingView(d){
   const code=String(d.code);
   if(portfolioReady) await portfolioReady;  // 等持仓从服务端加密文件加载完成
   const holds=holdings;
-  const h=holds.find(x=>String(x.code).padStart(6,'0')===code);
+  const h=holds.find(x=>padCode(x.code)===code);
   const emptyEl=document.getElementById('holdingEmpty');
   const contentEl=document.getElementById('holdingContent');
   const chip=document.getElementById('holdingChip');

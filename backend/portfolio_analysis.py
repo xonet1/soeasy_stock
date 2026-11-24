@@ -20,6 +20,8 @@ import math
 import numpy as np
 import pandas as pd
 
+from us_reader import is_us_code as _is_us_code, norm_code as _norm_us
+
 DEFAULT_ACCOUNT = "默认账户"
 
 
@@ -47,7 +49,11 @@ def normalize_holdings(holdings):
             warns.append("存在格式无效的持仓行，已忽略。")
             continue
         code = str(h.get("code", "") or "").strip()
-        code = "".join(ch for ch in code if ch.isdigit())[:6].zfill(6) if code else ""
+        # 美股 ticker 原样规范化（AAPL/BRK.B）；A 股只保留数字并补足 6 位
+        if _is_us_code(code):
+            code = _norm_us(code)
+        elif code:
+            code = "".join(ch for ch in code if ch.isdigit())[:6].zfill(6)
         if not code or code == "000000":
             warns.append(f"持仓代码无效：{h.get('code')!r}，已忽略。")
             continue

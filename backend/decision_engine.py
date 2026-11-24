@@ -48,6 +48,13 @@ import indicators
 import signals as sig_mod
 import volume_analysis
 import tdx_reader
+from us_reader import is_us_code, norm_code
+
+
+def _norm_code(code):
+    """决策引擎代码规范化：美股 ticker 原样（AAPL），A 股补足 6 位。"""
+    s = str(code or "").strip()
+    return norm_code(s) if is_us_code(s) else s.zfill(6)
 
 # 各模块延迟导入，缺依赖/离线时不影响其它维度
 _sentiment_ok = True
@@ -155,7 +162,7 @@ def _reliability(code, as_of=None):
     返回 (trust 0-100, label, detail, evidence)。缓存缺失/过期返回 None。
     纯本地读文件，不联网；与 decision_history 解耦，避免循环依赖。
     """
-    fp = os.path.join(_HIST_DIR, f"backtest_{str(code).zfill(6)}.json")
+    fp = os.path.join(_HIST_DIR, f"backtest_{_norm_code(code)}.json")
     if not os.path.exists(fp):
         return None
     try:
@@ -899,7 +906,7 @@ def _position(risk_extra, tone, conf, env_score=None):
 
 def build_decision(reader, code, refresh=False):
     """主入口：融合全部可量化信息，返回可执行投资决策。"""
-    code = str(code).zfill(6)
+    code = _norm_code(code)
     t0 = time.time()
     try:
         df = reader.read_recent_cached(code, n=260)

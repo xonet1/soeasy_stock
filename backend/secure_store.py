@@ -20,6 +20,8 @@ import threading
 
 from cryptography.fernet import Fernet, InvalidToken
 
+from us_reader import is_us_code as _is_us_code, norm_code as _norm_us
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECURE_DIR = os.path.join(BASE_DIR, "data", "secure")
 CIPHER_PATH = os.path.join(SECURE_DIR, "portfolio.enc")
@@ -181,6 +183,9 @@ def _norm_code(v):
     c = str(v or "").strip()
     if c.endswith((".SH", ".SZ", ".BJ")):
         c = c[:6]
+    # 美股 ticker（字母开头）原样保留并规范化，避免被当作无效代码丢弃
+    if _is_us_code(c):
+        return _norm_us(c)
     c = "".join(ch for ch in c if ch.isdigit())
     return c.zfill(6) if c and len(c) <= 6 else ""
 

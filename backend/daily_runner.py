@@ -20,6 +20,7 @@ import datetime as dt
 
 import decision_history
 import secure_store
+from us_reader import is_us_code, norm_code
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -74,6 +75,9 @@ def _norm_code(v):
     c = str(v or "").strip()
     if c.endswith(".SH") or c.endswith(".SZ") or c.endswith(".BJ"):
         c = c[:6]
+    # 美股 ticker（字母开头）原样保留并规范化，避免被当作空串丢弃
+    if is_us_code(c):
+        return norm_code(c)
     c = "".join(ch for ch in c if ch.isdigit())
     return c.zfill(6) if c and len(c) <= 6 else ""
 

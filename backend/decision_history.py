@@ -29,10 +29,17 @@ import threading
 import pandas as pd
 
 import decision_engine
+from us_reader import is_us_code, norm_code
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HISTORY_DIR = os.path.join(BASE_DIR, "data", "decision_history")
 _LOCK = threading.RLock()
+
+
+def _norm(code):
+    """快照账本代码规范化：美股 ticker 原样（AAPL），A 股补足 6 位。"""
+    s = str(code or "").strip()
+    return norm_code(s) if is_us_code(s) else s.zfill(6)
 HORIZONS = (1, 3, 5, 10)
 PRIMARY = 5
 SCHEMA_VERSION = 6  # 账本格式版本：升版后旧快照自动重算升级（v6=12维+市场环境/仓位字段落快照）
@@ -43,11 +50,11 @@ def _ensure_dir():
 
 
 def _book_path(code):
-    return os.path.join(HISTORY_DIR, f"{str(code).zfill(6)}.json")
+    return os.path.join(HISTORY_DIR, f"{_norm(code)}.json")
 
 
 def _bt_path(code):
-    return os.path.join(HISTORY_DIR, f"backtest_{str(code).zfill(6)}.json")
+    return os.path.join(HISTORY_DIR, f"backtest_{_norm(code)}.json")
 
 
 def _load_book(code):
@@ -63,7 +70,7 @@ def _load_book(code):
             return b
         except Exception:
             pass
-    return {"code": str(code).zfill(6), "name": "", "records": {}, "schema": SCHEMA_VERSION}
+    return {"code": _norm(code), "name": "", "records": {}, "schema": SCHEMA_VERSION}
 
 
 def _save_book(code, book):
@@ -109,7 +116,7 @@ def _compact(dec):
 
 def ensure_snapshot(reader, code, force=False):
     """确保当日快照存在。返回 (快照dict, 是否新建)。"""
-    code = str(code).zfill(6)
+    code = _norm(code)
     with _LOCK:
         book = _load_book(code)
         day = _as_of(reader, code)
@@ -153,7 +160,7 @@ def list_snapshots(code):
         row["ok"] = True
         row["as_of"] = day
         rows.append(row)
-    return {"ok": True, "code": str(code).zfill(6), "name": book.get("name", ""),
+    return {"ok": True, "code": _norm(code), "name": book.get("name", ""),
             "count": len(rows), "snapshots": rows}
 
 
@@ -241,7 +248,7 @@ def _stats(records, primary=PRIMARY):
 
 def verify_snapshots(reader, code):
     """用真实后续走势验证每日快照，返回 (带收益的快照列表, 统计)。"""
-    code = str(code).zfill(6)
+    code = _norm(code)
     book = _load_book(code)
     try:
         df = reader.read_day(code)
@@ -268,7 +275,7 @@ def _version(df):
 
 def backtest_signal(reader, code, step=5, max_points=160, force=False):
     """在历史每个截面重放技术面+量能信号，验证方向准确率。带文件缓存。"""
-    code = str(code).zfill(6)
+    code = _norm(code)
     try:
         df = reader.read_day(code)
     except Exception:
@@ -331,7 +338,7 @@ def backtest_signal(reader, code, step=5, max_points=160, force=False):
 def ensure_backtest(reader, code, force=False, cur_day=None):
     """确保回放缓存可用。缓存有效时只做轻量校验（读 n=5 日线 + json），
     日线更新到新交易日或首次访问才真正重放。返回是否本次重新生成。"""
-    code = str(code).zfill(6)
+    code = _norm(code)
     if force:
         backtest_signal(reader, code, force=True)
         return True
@@ -351,7 +358,7 @@ def ensure_backtest(reader, code, force=False, cur_day=None):
 
 def summary(reader, code):
     """一次性返回：每日快照验证 + 历史回放验证，供前端总览。"""
-    code = str(code).zfill(6)
+    code = _norm(code)
     snaps, snap_stats = verify_snapshots(reader, code)
     bt = backtest_signal(reader, code)
     return {
